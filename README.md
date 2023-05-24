@@ -1,6 +1,8 @@
 # WEBGL_LABS_2
 PA2 Tangible interface
-Sydorenko Roman 22 Vsriant 
+
+Sydorenko Roman 22 Variant
+
 Implement surface rotation based on hardware magnetometer sensor readings
 
 link to test in Chrome Android: https://tangible-interface.romadjan25.repl.co
