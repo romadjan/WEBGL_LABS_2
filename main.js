@@ -13,6 +13,7 @@ let video,
     texture,
     track,
     tex;
+let magSensor
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -146,7 +147,8 @@ function draw() {
     let translateToLeft = m4.translation(-0.03, 0, -20);
     let translateToRight = m4.translation(0.03, 0, -20);
 
-    let matAccum = m4.multiply(rotateToPointZero, modelView);
+    let matAccum = m4.multiply(rotateToPointZero, m4.multiply(modelView, m4.axisRotation([0, 1, 0], direction)));
+
     let matStill = m4.multiply(rotateToPointZero, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     let matAccum1 = m4.multiply(translateToPointZero, matStill);
     let matAccumLeft = m4.multiply(translateToLeft, matAccum);
@@ -472,6 +474,7 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
+    readMagnetometer()
     userPointCoord = {x: 0.5, y: 0.5}
     userRotAngle = 0.0;
     let canvas;
@@ -506,7 +509,6 @@ function init() {
     spaceball = new TrackballRotator(canvas, draw, 0);
 
     draw_();
-    // window.requestAnimationFrame(draw_);
 }
 
 function mat4Transpose(a, transposed) {
@@ -661,3 +663,36 @@ onmousemove = (e) => {
     userRotAngle = map(e.clientX, 0, window.outerWidth, 0, Math.PI * 0.5)
     draw()
 };
+
+let sensor = {
+    x: 0,
+    y: 0,
+    z: 0
+}
+let direction = 0;
+let initDirection = 0;
+let start = true;
+let alpha;
+
+function readMagnetometer() {
+    magSensor = new Magnetometer({frequency: 60});
+
+    magSensor.addEventListener("reading", (e) => {
+        sensor.x = magSensor.x;
+        sensor.y = magSensor.y;
+        sensor.z = magSensor.z;
+        let xDoc = document.getElementById("x")
+        let yDoc = document.getElementById("y")
+        let zDoc = document.getElementById("z")
+        xDoc.innerHTML = sensor.x
+        yDoc.innerHTML = sensor.y
+        zDoc.innerHTML = sensor.z
+        if (start) {
+            let perpendicular = m4.cross([sensor.x, sensor.y, sensor.z], [0, 1, 0]);
+            alpha = Math.atan2(perpendicular[0], perpendicular[2])
+            start = false;
+        }
+        direction = alpha - Math.atan2(sensor.x, sensor.z)
+    });
+    magSensor.start();
+}
