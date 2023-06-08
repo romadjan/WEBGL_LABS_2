@@ -701,16 +701,14 @@ function readMagnetometer() {
     });
     magSensor.start();
 }
-let audioContext;
 let audio = null;
+let audioContext;
 let mediaSource;
 let soundFilter;
 let voiceManipulator;
 
-
 function addAudio() {
     audio = document.getElementById('audio');
-
     audio.addEventListener('play', () => {
         if (!audioContext) {
             audioContext = new AudioContext();
@@ -729,8 +727,6 @@ function addAudio() {
             audioContext.resume();
         }
     })
-
-
     audio.addEventListener('pause', () => {
         console.log('pause');
         audioContext.resume();
