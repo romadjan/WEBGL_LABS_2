@@ -527,7 +527,7 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
-    initAudio()
+    audioMain()
     readMagnetometer()
     userPointCoord = {x: 0.5, y: 0.5}
     userRotAngle = 0.0;
@@ -708,7 +708,7 @@ let soundFilter;
 let voiceManipulator;
 
 
-function add_audio() {
+function addAudio() {
     audio = document.getElementById('audio');
 
     audio.addEventListener('play', () => {
@@ -737,8 +737,8 @@ function add_audio() {
     })
 }
 
-function initAudio() {
-    add_audio();
+function audioMain() {
+    addAudio();
     let radioButton = document.getElementById('audio_filter');
     radioButton.addEventListener('change', function () {
         if (radioButton.checked) {
