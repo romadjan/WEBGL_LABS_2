@@ -147,7 +147,7 @@ function draw() {
     let translateToLeft = m4.translation(-0.03, 0, -20);
     let translateToRight = m4.translation(0.03, 0, -20);
 
-    let matAccum = m4.multiply(rotateToPointZero, m4.multiply(modelView, m4.axisRotation([0, 1, 0], direction)));
+    let matAccum = m4.multiply(rotateToPointZero, modelView);
 
     let matStill = m4.multiply(rotateToPointZero, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
     let matAccum1 = m4.multiply(translateToPointZero, matStill);
@@ -197,6 +197,12 @@ function draw() {
     surface.Draw();
 
     gl.colorMask(true, true, true, true);
+    let moveSphere = rotateVector(0, 0, direction + Math.PI / 2)
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, m4.multiply(m4.translation(moveSphere[0], moveSphere[1], moveSphere[2]), matAccumRight));
+    if (voiceManipulator) {
+        voiceManipulator.setPosition(moveSphere[0], moveSphere[1], moveSphere[2])
+    }
+    sphere.Draw();
 }
 
 function draw_() {
@@ -371,7 +377,15 @@ function CreateSphereSurface(r = 0.1) {
     while (lon < Math.PI) {
         while (lat < Math.PI * 0.5) {
             let v1 = sphereSurfaceData(r, lon, lat);
+            let v2 = sphereSurfaceData(r, lon + 0.05, lat);
+            let v3 = sphereSurfaceData(r, lon, lat + 0.05);
+            let v4 = sphereSurfaceData(r, lon + 0.05, lat + 0.05);
             vertexList.push(v1.x, v1.y, v1.z);
+            vertexList.push(v2.x, v2.y, v2.z);
+            vertexList.push(v3.x, v3.y, v3.z);
+            vertexList.push(v3.x, v3.y, v3.z);
+            vertexList.push(v4.x, v4.y, v4.z);
+            vertexList.push(v2.x, v2.y, v2.z);
             lat += 0.05;
         }
         lat = -Math.PI * 0.5
@@ -385,6 +399,45 @@ function sphereSurfaceData(r, u, v) {
     let y = r * Math.sin(u) * Math.sin(v);
     let z = r * Math.cos(u);
     return {x: x, y: y, z: z};
+}
+
+function rotateVector(alpha, beta, gamma) {
+    const alphaRad = alpha;
+    const betaRad = beta;
+    const gammaRad = gamma;
+    let vector = [0, 2, 0];
+    const rotZ = [
+        [Math.cos(gammaRad), -Math.sin(gammaRad), 0],
+        [Math.sin(gammaRad), Math.cos(gammaRad), 0],
+        [0, 0, 1]
+    ];
+    vector = multiplyMatrixVector(rotZ, vector);
+    const rotY = [
+        [Math.cos(betaRad), 0, Math.sin(betaRad)],
+        [0, 1, 0],
+        [-Math.sin(betaRad), 0, Math.cos(betaRad)]
+    ];
+    vector = multiplyMatrixVector(rotY, vector);
+    const rotX = [
+        [1, 0, 0],
+        [0, Math.cos(alphaRad), -Math.sin(alphaRad)],
+        [0, Math.sin(alphaRad), Math.cos(alphaRad)]
+    ];
+    vector = multiplyMatrixVector(rotX, vector);
+
+    return vector;
+}
+
+function multiplyMatrixVector(matrix, vector) {
+    const result = [];
+    for (let i = 0; i < matrix.length; i++) {
+        let sum = 0;
+        for (let j = 0; j < vector.length; j++) {
+            sum += matrix[i][j] * vector[j];
+        }
+        result.push(sum);
+    }
+    return result;
 }
 
 function vec3Cross(a, b) {
@@ -474,13 +527,14 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
+    initAudio()
     readMagnetometer()
     userPointCoord = {x: 0.5, y: 0.5}
     userRotAngle = 0.0;
     let canvas;
     try {
         let resolution = Math.min(window.innerHeight, window.innerWidth);
-        canvas = document.querySelector('canvas');
+        canvas = document.getElementById('webglcanvas');
         gl = canvas.getContext("webgl");
         canvas.width = resolution;
         canvas.height = resolution;
@@ -494,7 +548,7 @@ function init() {
             throw "Browser does not support WebGL";
         }
     } catch (e) {
-        document.querySelector('"canvas-holder"').innerHTML =
+        document.getElementById("canvas-holder").innerHTML =
             "<p>Sorry, could not get a WebGL graphics context.</p>";
         return;
     }
@@ -562,28 +616,6 @@ function mat4Invert(m, inverse) {
     return true;
 }
 
-window.onkeydown = (e) => {
-    // console.log(e.keyCode)
-    switch (e.keyCode) {
-        case 87:
-            userPointCoord.x -= 0.01;
-            break;
-        case 83:
-            userPointCoord.x += 0.01;
-            break;
-        case 65:
-            userPointCoord.y += 0.01;
-            break;
-        case 68:
-            userPointCoord.y -= 0.01;
-            break;
-    }
-    userPointCoord.x = Math.max(0.001, Math.min(userPointCoord.x, 0.999))
-    userPointCoord.y = Math.max(0.001, Math.min(userPointCoord.y, 0.999))
-    // console.log(userPointCoord);
-    draw();
-}
-
 function LoadTexture() {
     texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -637,33 +669,6 @@ function CreateWebCamTexture() {
     return textureID;
 }
 
-window.onkeydown = (e) => {
-    // console.log(e.keyCode)
-    switch (e.keyCode) {
-        case 87:
-            userPointCoord.x -= 0.01;
-            break;
-        case 83:
-            userPointCoord.x += 0.01;
-            break;
-        case 65:
-            userPointCoord.y += 0.01;
-            break;
-        case 68:
-            userPointCoord.y -= 0.01;
-            break;
-    }
-    userPointCoord.x = Math.max(0.001, Math.min(userPointCoord.x, 0.999))
-    userPointCoord.y = Math.max(0.001, Math.min(userPointCoord.y, 0.999))
-    // console.log(userPointCoord);
-    draw();
-}
-
-onmousemove = (e) => {
-    userRotAngle = map(e.clientX, 0, window.outerWidth, 0, Math.PI * 0.5)
-    draw()
-};
-
 let sensor = {
     x: 0,
     y: 0,
@@ -695,4 +700,55 @@ function readMagnetometer() {
         direction = alpha - Math.atan2(sensor.x, sensor.z)
     });
     magSensor.start();
+}
+let audioContext;
+let audio = null;
+let mediaSource;
+let soundFilter;
+let voiceManipulator;
+
+
+function add_audio() {
+    audio = document.getElementById('audio');
+
+    audio.addEventListener('play', () => {
+        if (!audioContext) {
+            audioContext = new AudioContext();
+            mediaSource = audioContext.createMediaElementSource(audio);
+            voiceManipulator = audioContext.createPanner();
+            soundFilter = audioContext.createBiquadFilter();
+
+            mediaSource.connect(voiceManipulator);
+            voiceManipulator.connect(soundFilter);
+            soundFilter.connect(audioContext.destination);
+
+            soundFilter.type = 'lowpass';
+            soundFilter.Q.value = 3;
+            soundFilter.frequency.value = 1300;
+            soundFilter.gain.value = 16;
+            audioContext.resume();
+        }
+    })
+
+
+    audio.addEventListener('pause', () => {
+        console.log('pause');
+        audioContext.resume();
+    })
+}
+
+function initAudio() {
+    add_audio();
+    let radioButton = document.getElementById('audio_filter');
+    radioButton.addEventListener('change', function () {
+        if (radioButton.checked) {
+            voiceManipulator.disconnect();
+            voiceManipulator.connect(soundFilter);
+            soundFilter.connect(audioContext.destination);
+        } else {
+            voiceManipulator.disconnect();
+            voiceManipulator.connect(audioContext.destination);
+        }
+    });
+    audio.play();
 }
